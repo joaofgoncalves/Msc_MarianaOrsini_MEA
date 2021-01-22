@@ -130,6 +130,8 @@ for(buffDist in dists){
   
 }
 
+write_sf(minasJazidas23S_buff,"./OUT/SampleBuffers/MinasJazidas_Buff_5000m.shp")
+write_sf(randPts_buff, "./OUT/SampleBuffers/randPts_Buff_5000m.shp")
 
 ## ----------------------------------------------------------------------------- ##
 
@@ -148,8 +150,15 @@ for(i in 1:length(outDiffs)){
   }
 }
 
-outDiffsDF %>% 
+
+
+outDiffsDF_Agg <- outDiffsDF %>% 
   group_by(dist) %>% 
   summarize_all(.funs = list(avg = mean))
 
+write.csv(outDiffsDF,"./OUT/LandChangeProportion/outDiffsDF_ByBuffDist-v1.csv", row.names = FALSE)
+
+write.csv(outDiffsDF_Agg,"./OUT/LandChangeProportion/outDiffsDF_ByBuffDist_Agg-v1.csv", row.names = FALSE)
+
+#save.image("./OUT/LandChangeProportion/LandChangePropResults-v1.RData")
 
