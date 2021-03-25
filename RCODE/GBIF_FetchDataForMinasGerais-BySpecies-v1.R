@@ -1,6 +1,8 @@
 
 
 
+
+
 st_envelope <- function(x) st_as_sfc(st_bbox(x))
 
 shpMinasGerais <- read_sf("./DATA_/VECTOR/gadm36_BRA_shp/gadm36_BRA_1.shp") %>% 
