@@ -11,15 +11,8 @@ library(stringi)
 library(stringr)
 library(rlang)
 library(crayon)
+library(randomForest)
 
-
-grid1k_wgs84 <- read_sf("./DATA_/VECTOR/Area_estudo/espinhaco_grid_WGS84.shp")
-
-dfPathList <- list.files("./DATA_/TABLES/_PRED_DATASETS/", ".rds$", full.names = TRUE)
-
-spData <- readxl::read_excel("./DATA_/TABLES/SpeciesData/Amphibians/endemic_amphibia_Espinhaco_v2-1.xlsx")
-
-#length(unique(spData$Species))
 
 
 ## -------------------------------------------------------------- ##
@@ -109,9 +102,9 @@ prepSpDataWithGridID <- function(sfSpeciesDF,
     
     outDF <- outDF %>% 
       mutate(cd = paste(gsub("\\ +","_",SpeciesName),ID,Year,sep="_")) %>% 
-      filter (!duplicated(cd))
+      filter(!duplicated(cd))
       #distinct(SpeciesName, ID, Year, 
-      #                         .keep_all = TRUE)
+      #                         .keep_all = TRUE) # DOES NOT WORK
   }
   
   if(filterByMinObs){
@@ -329,13 +322,6 @@ createTrainData <- function(spData,
     filterByMinObs = filterByMinObs,
     nmin           = nmin,
     getCounts      = FALSE)
-  
-  # spDataGridDF %>% 
-  #   mutate(cd=paste(gsub("\\ +","_",SpeciesName),ID,Year,sep="_")) %>% 
-  #   filter (!duplicated(cd)) %>% 
-  #   #distinct(cd, .keep_all = TRUE) %>% 
-  #   arrange(SpeciesName,ID) %>% 
-  #   View
                           
   cat(blue("\n\n--- READING OCCURRENCES' ENVIRONMENTAL DATA PER YEAR ---\n\n"))
   
@@ -371,7 +357,6 @@ createTrainData <- function(spData,
     spNames <- getSpeciesNames(spDataGridDF)
     
     if(progressBar){
-      #cat(green("\nGenerating pseudo-absences data by species/year:\n"))
       pb <- txtProgressBar(1, length(spNames), style=3)
     } 
     
@@ -386,8 +371,6 @@ createTrainData <- function(spData,
         nPAsets     = nPAsets,
         nPAperSet   = nPAperSet,
         progressBar = progressBar)
-      
-      #cat(blue("\n\n--- EXPORTING DATA FOR SPECIES:",spName," ---\n\n"))
       
       trainData <- bind_rows(envDataOcc %>% filter(SpeciesName == spName),
                             mergeDFsInList(PseudoAbsData))
@@ -415,8 +398,155 @@ createTrainData <- function(spData,
 }
 
 
+
+
+multiRoundIterVarSel <- function(trainData, 
+                                 trainMatrix, 
+                                 predVars, 
+                                 ntree     = 1000,
+                                 nmax      = "10-rule", 
+                                 thresh    = 0.8, 
+                                 aggFun    = median,
+                                 method    = "spearman",
+                                 varGroups = NULL, 
+                                 doNZV     = TRUE, 
+                                 doHighCor = TRUE, 
+                                 highCor   = 0.95,
+                                 pbar      = TRUE, 
+                                 verbose   = TRUE,
+                                  ...){
+  
+  if(verbose) cat(blue("\n\n***** DOING PRELIMINARY STUFF *****\n\n"))
+  
+  x <- trainData[,predVars]
+  
+  if(doNZV){
+    nzvRem <- caret::nearZeroVar(x[,predVars])
+    x <- select(x, -all_of(nzvRem))
+  }
+  if(doHighCor){
+    cmat <- cor(x, method=method)
+    corRem <- caret::findCorrelation(cmat, cutoff = highCor)
+    x <- select(x, -all_of(corRem))
+  }
+
+  
+  if(verbose) cat(blue("\n\n***** RUNNING RANDOM FOREST BY PA SET *****\n\n"))
+  
+  
+  if(pbar) pb <- txtProgressBar(min = 1, max = ncol(trainMatrix), style = 3)
+  
+  
+  for(i in 1:ncol(trainMatrix)){
+
+    trainVec <- trainMatrix[,i]
+    y.train <- as.factor(trainData[trainVec,"pa"])
+    x.train <- x[trainVec, ]
+    
+    if(nmax == "10-rule"){
+      
+      nmax <- round(nrow(x.train) / 10)
+      
+      if(!is.null(varGroups)){
+        nGroups <- length(unique(varGroups$VarGroups))
+        nmax <- round(nmax / nGroups)
+        groupNames <- unique(unlist(varGroups[,"VarGroups"]))
+      }else{
+        nGroups <- 1
+      }
+    }
+    
+    rf <- randomForest(y = y.train, x = x.train, ntree=ntree)
+    
+    tmpImp <- importance(rf)
+    tmpImp <- data.frame(varNames = rownames(tmpImp), 
+                         importance = tmpImp[,1], stringsAsFactors = FALSE) %>% 
+      arrange(varNames)
+    colnames(tmpImp) <- c("varNames",paste("r",i,sep="_"))
+    
+    if(i==1){
+      impMat <- tmpImp
+    }else{
+      impMat <- bind_cols(impMat,
+                          tmpImp %>% dplyr::select(2))
+    }
+    
+    setTxtProgressBar(pb, i)
+    
+  }
+  
+  
+  if(verbose) cat(blue("\n\n***** ITERATIVE SELECTION USING IMPORTANCE & CORRELATION *****\n\n"))
+  
+  
+  vimpDF <- data.frame( varNames = impMat[,"varNames"],
+                        vimpAvg  = apply(impMat[,-1], 1, FUN = aggFun),
+                        vimpStd  = apply(impMat[,-1], 1, FUN = sd),
+                        vimpMAD  = apply(impMat[,-1], 1, FUN = mad)) %>% 
+    arrange(desc(vimpAvg))
+  
+  if(!is.null(varGroups)){
+    
+    vimpDF <- vimpDF %>% left_join(varGroups, by ="varNames")
+    vimpDF_init <- vimpDF
+  }
+  
+  
+
+  for(j in 1:nGroups){
+    
+    if(!is.null(varGroups)){
+      vimpDF <- vimpDF_init %>% filter(VarGroups == groupNames[j])
+      cat(yellow("\nSelecting in group:",groupNames[j],"\n"))
+    }
+    
+    selVars <- vimpDF[1,1]
+    
+    for(i in 2:nrow(vimpDF)){
+      
+      activeVar <- vimpDF[i,1]
+      cmat <- cor(trainData[,c(selVars,activeVar)], method = method)
+      corVec <- abs(cmat[lower.tri(cmat)])
+      
+      if(sum(corVec > thresh) == 0){
+        selVars <- c(selVars,activeVar)
+      }
+      
+      if(!is.null(nmax)){
+        
+        if(length(selVars) >= nmax){
+          if(verbose) message(yellow("\nReached the maximum number of variables (nmax)!\n"))
+          break
+        }
+      }
+    }
+    
+    if(j==1){
+      selVarsAll <- c(selVars)
+    }else{
+      selVarsAll <- c(selVarsAll,selVars)
+    }
+  }
+  
+  if(!is.null(varGroups)){
+    attr(selVarsAll,"vimpDF") <- vimpDF_init
+  }else{
+    attr(selVarsAll,"vimpDF") <- vimpDF
+  }
+  
+  return(selVarsAll)
+}
+
+
+
 ## -------------------------------------------------------------- ##
 
+
+grid1k_wgs84 <- read_sf("./DATA_/VECTOR/Area_estudo/espinhaco_grid_WGS84.shp")
+
+dfPathList <- list.files("./DATA_/TABLES/_PRED_DATASETS/", ".rds$", full.names = TRUE)
+
+spData <- readxl::read_excel("./DATA_/TABLES/SpeciesData/Amphibians/endemic_amphibia_Espinhaco_v2-1.xlsx")
 
 
 
@@ -427,50 +557,9 @@ spDataGrid <- prepSpDataWithGridID(spDatasf, grid1k_wgs84,
                          filterByMinObs = FALSE, getCounts = TRUE)
 
 View(spDataGrid[["spCounts"]])
-#View(spDataGrid[["spCounts"]])
-
 
 envDataOcc <- getEnvDataByYear(dfPathList,
                              spDataGrid)
-
-
-trainDataFull <- 
-createTrainData (spData = spData, 
-                 spName = "Boana botumirim",
-                 sfGrid = grid1k_wgs84,
-                 dfPathList = dfPathList,
-                 spNameCol      = "Species", 
-                 lonCol         = "Lon", 
-                 latCol         = "Lat", 
-                 yearCol        = "Year",
-                 yrStart        = 1985, 
-                 yrEnd          = 2019, 
-                 filterByMinObs = TRUE,
-                 nmin           = 30,
-                 removeDups     = TRUE,
-                 nPAsets        = 10,
-                 nPAperSet      = "equal",
-                 progressBar    = TRUE
-)
-
-
-
-spData = spData 
-spName = "Boana botumirim"
-sfGrid = grid1k_wgs84
-dfPathList = dfPathList
-spNameCol      = "Species" 
-lonCol         = "Lon" 
-latCol         = "Lat" 
-yearCol        = "Year"
-yrStart        = 1985 
-yrEnd          = 2019 
-filterByMinObs = TRUE
-nmin           = 30
-removeDups     = TRUE
-nPAsets        = 10
-nPAperSet      = "equal"
-progressBar    = TRUE
 
 
 createTrainData (spData           = spData, 
@@ -492,5 +581,33 @@ createTrainData (spData           = spData,
                    outDir         = "./DATA_/TABLES/_TRAIN_DATASETS/")
 
 
+
+
+varGroups = read_csv("./DATA_/varNames-v1.csv")
+
+trainData <- read_rds("./DATA_/TABLES/_TRAIN_DATASETS/Boana_botumirim_TrainData_PPA.rds")
+
+trainData <- trainData %>% select(-WETL)
+
+trainMatrix <- read_rds("./DATA_/TABLES/_TRAIN_DATASETS/Boana_botumirim_TrainMatrix_PPA.rds")
+
+predVars <- colnames(trainData)[8:52]
+
+
+
+multiRoundIterVarSel(trainData, 
+                                 trainMatrix, 
+                                 predVars, 
+                                 ntree     = 1000,
+                                 nmax      = "10-rule", 
+                                 thresh    = 0.75, 
+                                 aggFun    = median,
+                                 method    = "spearman",
+                                 varGroups, 
+                                 doNZV     = TRUE, 
+                                 doHighCor = TRUE, 
+                                 highCor   = 0.95,
+                                 pbar      = TRUE, 
+                                 verbose   = TRUE)
 
 
