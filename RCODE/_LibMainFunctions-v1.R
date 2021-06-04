@@ -539,7 +539,7 @@ createTrainData <- function(spData,
                             ){
   
   
-  message(blue("\n\n***** PREPARING AND FILTERING DATA *****n\n"))
+  message(blue("\n\n***** PREPARING AND FILTERING DATA *****\n"))
   
   sfSpeciesDF <- prepSpData(
     spData         = spData,
@@ -553,7 +553,7 @@ createTrainData <- function(spData,
     nmin           = nmin,
     asSF           = TRUE)
 
-  message(blue("\n\n*****  ASSIGNING GRID IDENTIFIERS ***** \n\n"))
+  message(blue("\n\n*****  ASSIGNING GRID IDENTIFIERS *****\n"))
   
   spDataGridDF <- prepSpDataWithGridID(
     sfSpeciesDF    = sfSpeciesDF,

@@ -52,7 +52,7 @@ createTrainData (spData           = spData,
                    yrStart        = 1985,
                    yrEnd          = 2019,
                    filterByMinObs = TRUE,
-                   nmin           = 30,
+                   nmin           = 20,
                    removeDups     = TRUE,
                    nPAsets        = 10,
                    nPAperSet      = "equal",
@@ -61,7 +61,7 @@ createTrainData (spData           = spData,
 
 ## -------------------------------------------------------------------------------------- ##
 
-spData <- readxl::read_excel("./DATA_/TABLES/SpeciesData/Birds/DH_Highland_Birds-v2.xlsx")
+spData <- readxl::read_excel("./DATA_/TABLES/SpeciesData/Birds/DH_Highland_Birds-v3.xlsx")
 
 
 spDatasf <- prepSpData(spData, 
@@ -76,7 +76,7 @@ spDataGrid <- prepSpDataWithGridID(spDatasf, grid1k_wgs84,
                                    filterByMinObs = FALSE, getCounts = TRUE)
 
 spCountsBirds <- spDataGrid[["spCounts"]] %>% st_drop_geometry()
-write_csv(spCountsBirds,"./OUT/Species1KmCounts_HighlandBirds-v1.csv")
+write_csv(spCountsBirds,"./OUT/Species1KmCounts_HighlandBirds-v2.csv")
 
 
 createTrainData (spData           = spData,
@@ -90,10 +90,10 @@ createTrainData (spData           = spData,
                  yrStart        = 1985,
                  yrEnd          = 2019,
                  filterByMinObs = TRUE,
-                 nmin           = 30,
+                 nmin           = 20,
                  removeDups     = TRUE,
                  nPAsets        = 10,
                  nPAperSet      = "equal",
                  progressBar    = TRUE,
-                 outDir         = "./DATA_/TABLES/_TRAIN_DATASETS/BIRDS")
+                 outDir         = "./DATA_/TABLES/_TRAIN_DATASETS/")
 

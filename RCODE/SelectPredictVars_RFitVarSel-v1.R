@@ -31,7 +31,7 @@ source("./RCODE/_LibMainFunctions-v1.R")
 varGroups = read_csv("./DATA_/varNames-v1.csv")
 
 # Base directory holding the train data/matrix
-baseDir <- "./DATA_/TABLES/_TRAIN_DATASETS/BIRDS/"
+baseDir <- "./DATA_/TABLES/_TRAIN_DATASETS/BIRDS_TODO_AGAIN/"
 
 # The actual column range of predictor variables to use that is in the TRAIN DATASETS files
 varRange <- 8:52
