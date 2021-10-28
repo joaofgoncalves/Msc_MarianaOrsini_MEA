@@ -14,6 +14,8 @@ library(biomod2)
 library(biomod2plus)
 library(trend)
 library(diptest)
+library(terra)
+
 
 ## -------------------------------------------------------------------------------------- ##
 
@@ -22,7 +24,9 @@ library(diptest)
 # Read ancillary functions
 source("./RCODE/_LibMainFunctions-v1.R")
 
-grid1k_wgs84 <- read_sf("./DATA_/VECTOR/Area_estudo/espinhaco_grid_WGS84.shp")
+#grid1k_wgs84 <- read_sf("./DATA_/VECTOR/Area_estudo/espinhaco_grid_WGS84.shp")
+
+grid1k_wgs84 <- vect("./DATA_/VECTOR/Area_estudo/espinhaco_grid_WGS84.shp")
 
 dfPathList <- list.files("./DATA_/TABLES/_PRED_DATASETS/", ".rds$", full.names = TRUE)
 
@@ -37,7 +41,8 @@ spDatasf <- prepSpData(spData, filterByMinObs = FALSE)
 spDataGrid <- prepSpDataWithGridID(spDatasf, grid1k_wgs84,
                          filterByMinObs = FALSE, getCounts = TRUE)
 
-spCountsAmph <- spDataGrid[["spCounts"]] %>% st_drop_geometry()
+spCountsAmph <- spDataGrid[["spCounts"]]
+
 write_csv(spCountsAmph,"./OUT/Species1KmCounts_Amphibians-v1.csv")
 
 
@@ -52,12 +57,12 @@ createTrainData (spData           = spData,
                    yrStart        = 1985,
                    yrEnd          = 2019,
                    filterByMinObs = TRUE,
-                   nmin           = 20,
+                   nmin           = 15,
                    removeDups     = TRUE,
                    nPAsets        = 10,
                    nPAperSet      = "equal",
                    progressBar    = TRUE,
-                   outDir         = "./DATA_/TABLES/_TRAIN_DATASETS/")
+                   outDir         = "./DATA_/TABLES/_TRAIN_DATASETS/v3/AMPHIBIANS")
 
 ## -------------------------------------------------------------------------------------- ##
 
@@ -75,8 +80,9 @@ spDatasf <- prepSpData(spData,
 spDataGrid <- prepSpDataWithGridID(spDatasf, grid1k_wgs84,
                                    filterByMinObs = FALSE, getCounts = TRUE)
 
-spCountsBirds <- spDataGrid[["spCounts"]] %>% st_drop_geometry()
-write_csv(spCountsBirds,"./OUT/Species1KmCounts_HighlandBirds-v2.csv")
+spCounts <- spDataGrid[["spCounts"]]
+
+write_csv(spCounts,"./OUT/Species1KmCounts_HighlandBirds-v2.csv")
 
 
 createTrainData (spData           = spData,
@@ -90,10 +96,52 @@ createTrainData (spData           = spData,
                  yrStart        = 1985,
                  yrEnd          = 2019,
                  filterByMinObs = TRUE,
-                 nmin           = 20,
+                 nmin           = 15,
                  removeDups     = TRUE,
                  nPAsets        = 10,
                  nPAperSet      = "equal",
                  progressBar    = TRUE,
-                 outDir         = "./DATA_/TABLES/_TRAIN_DATASETS/")
+                 outDir         = "./DATA_/TABLES/_TRAIN_DATASETS/v3/BIRDS")
+
+
+## -------------------------------------------------------------------------------------- ##
+
+spData <- readxl::read_excel("./DATA_/TABLES/SpeciesData/Reptiles/Repteis-Espinhaco_Database_2021-vii-15-Henrique_MO_JG_v3.xlsx")
+
+
+spDatasf <- prepSpData(spData,
+                       filterByMinObs = FALSE,
+                       spNameCol      = "Species",
+                       latCol         = "Latitude",
+                       lonCol         = "Longitude",
+                       yearCol        = "Year"
+)
+
+spDataGrid <- prepSpDataWithGridID(spDatasf, grid1k_wgs84,
+                                   filterByMinObs = FALSE, getCounts = TRUE)
+
+spCounts <- spDataGrid[["spCounts"]]
+
+write_csv(spCounts,"./OUT/Species1KmCounts_Reptiles-v1.csv")
+
+
+createTrainData (spData         = spData,
+                 spName         = NULL,
+                 sfGrid         = grid1k_wgs84,
+                 dfPathList     = dfPathList,
+                 spNameCol      = "Species",
+                 lonCol         = "Longitude",
+                 latCol         = "Latitude",
+                 yearCol        = "Year",
+                 yrStart        = 1985,
+                 yrEnd          = 2019,
+                 filterByMinObs = TRUE,
+                 nmin           = 15,
+                 removeDups     = TRUE,
+                 nPAsets        = 10,
+                 nPAperSet      = "equal",
+                 progressBar    = TRUE,
+                 outDir         = "./DATA_/TABLES/_TRAIN_DATASETS/v2/REPTILES")
+
+
 
