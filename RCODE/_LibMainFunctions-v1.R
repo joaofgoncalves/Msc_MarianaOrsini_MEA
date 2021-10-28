@@ -10,7 +10,7 @@ library(stringr)
 library(rlang)
 library(crayon)
 library(randomForest)
-
+library(terra)
 
 
 ## Get functions for returning basic inputs -----------------------------------
@@ -257,11 +257,27 @@ prepSpDataWithGridID <- function(sfSpeciesDF,
                        nmin           = 30,
                        getCounts      = FALSE){
   
-  outDF <- st_intersection(sfSpeciesDF, sfGrid) %>% 
+  
+  if(!inherits(sfSpeciesDF,"SpatVector")){
+    sfSpeciesDF <- as(sfSpeciesDF,"SpatVector")
+  }
+  
+  if(inherits(sfSpeciesDF,"SpatVector") & inherits(sfGrid,"SpatVector")){
+    
+    intPtsGrid <- terra::intersect(sfSpeciesDF, sfGrid)
+    
+    outDF <- as(intPtsGrid, "data.frame") %>%
+      #na.omit() %>% 
+      arrange(SpeciesName, ID, Year)
+  
+  }else{
+    outDF <- st_intersection(sfSpeciesDF, sfGrid) %>% 
     suppressMessages() %>% 
     suppressWarnings() %>% 
     na.omit() %>% 
     arrange(SpeciesName, ID, Year)
+  }
+
   
   if(removeDups){
     
@@ -555,6 +571,9 @@ createTrainData <- function(spData,
 
   message(blue("\n\n*****  ASSIGNING GRID IDENTIFIERS *****\n"))
   
+  # Due to errors in sf processing this part was shift to the 
+  sfSpeciesDF <- as(sfSpeciesDF,"SpatVector")
+  
   spDataGridDF <- prepSpDataWithGridID(
     sfSpeciesDF    = sfSpeciesDF,
     sfGrid         = sfGrid,
@@ -601,6 +620,8 @@ createTrainData <- function(spData,
     } 
     
     i<-0
+    
+    print(spNames)
     
     for(spName in spNames){
     
