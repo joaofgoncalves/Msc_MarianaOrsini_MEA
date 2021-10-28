@@ -14,8 +14,8 @@ from==to
 
 tr <- tr[-1,-1]
 
-fromMap <- raster("E:/Projects/MSc_MarianaOrsini/DATA/RASTER/LULC_1985_2019_int/reclass_mapbiomas_bbox_1985_int.tif")
-toMap <- raster("E:/Projects/MSc_MarianaOrsini/DATA/RASTER/LULC_1985_2019_int/reclass_mapbiomas_bbox_2019_int.tif")
+fromMap <- raster("D:/Projects/MSc_MarianaOrsini/DATA/RASTER/LULC_1985_2019_int/reclass_mapbiomas_bbox_1985_int.tif")
+toMap <- raster("D:/Projects/MSc_MarianaOrsini/DATA/RASTER/LULC_1985_2019_int/reclass_mapbiomas_bbox_2019_int.tif")
 
 outMap <- fromMap
 #outMap[!is.na(outMap)] <- 0
@@ -89,24 +89,27 @@ transFunc <- function(x, y, ...){
   return(TRANS_VEC[paste(x,y,sep="_")])
 }
 
-fromMap <- rast("E:/Projects/MSc_MarianaOrsini/DATA/RASTER/LULC_1985_2019_int/reclass_mapbiomas_bbox_1985_int.tif")
-toMap <- rast("E:/Projects/MSc_MarianaOrsini/DATA/RASTER/LULC_1985_2019_int/reclass_mapbiomas_bbox_2019_int.tif")
 
+## 1985 - 2005
+## --------------------------------------------------------------- ##
+fromMap <- rast("D:/Projects/MSc_MarianaOrsini/DATA/RASTER/LULC_1985_2019_int/reclass_mapbiomas_bbox_1985_int.tif")
+toMap <- rast("D:/Projects/MSc_MarianaOrsini/DATA/RASTER/LULC_1985_2019_int/reclass_mapbiomas_bbox_2005_int.tif")
 twoMaps <- c(fromMap, toMap)
 
 transMap <- lapp(twoMaps, transFunc)
+terra::writeRaster(transMap,"./DATA_/RASTER/TransitionsMap_1985_2005_v2.tif", datatype="INT2S")
 
-fromMap <- rast("E:/Projects/MSc_MarianaOrsini/DATA/RASTER/LULC_1985_2019_int/reclass_mapbiomas_bbox_2000_int.tif")
 
+
+
+## 2005 - 2019
+## --------------------------------------------------------------- ##
+fromMap <- rast("D:/Projects/MSc_MarianaOrsini/DATA/RASTER/LULC_1985_2019_int/reclass_mapbiomas_bbox_2005_int.tif")
+toMap <- rast("D:/Projects/MSc_MarianaOrsini/DATA/RASTER/LULC_1985_2019_int/reclass_mapbiomas_bbox_2019_int.tif")
 twoMaps <- c(fromMap, toMap)
 
-transMap2000 <- lapp(twoMaps, transFunc)
-
-
-terra::writeRaster(transMap,"./DATA_/RASTER/TransitionsMap_1985_2019_v1.tif", datatype="INT2S")
-
-
-terra::writeRaster(transMap2000,"./DATA_/RASTER/TransitionsMap_2000_2019_v1.tif", datatype="INT2S")
+transMap2005 <- lapp(twoMaps, transFunc)
+terra::writeRaster(transMap2005,"./DATA_/RASTER/TransitionsMap_2005_2019_v2.tif", datatype="INT2S")
 
 
 

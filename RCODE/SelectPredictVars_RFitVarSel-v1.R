@@ -28,10 +28,10 @@ source("./RCODE/_LibMainFunctions-v1.R")
 
 # Table with groups of variables: STATIC (like climate) and dynamic 
 # (annual land use and satellite indices)
-varGroups = read_csv("./DATA_/varNames-v1.csv")
+varGroups <- read_csv("./DATA_/varNames-v1.csv")
 
 # Base directory holding the train data/matrix
-baseDir <- "./DATA_/TABLES/_TRAIN_DATASETS/BIRDS_TODO_AGAIN/"
+baseDir <- "./DATA_/TABLES/_TRAIN_DATASETS/v3/BIRDS/"
 
 # The actual column range of predictor variables to use that is in the TRAIN DATASETS files
 varRange <- 8:52
