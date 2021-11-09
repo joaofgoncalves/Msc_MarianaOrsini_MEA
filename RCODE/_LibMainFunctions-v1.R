@@ -11,7 +11,7 @@ library(rlang)
 library(crayon)
 library(randomForest)
 library(terra)
-
+library(trend)
 
 ## Get functions for returning basic inputs -----------------------------------
 
