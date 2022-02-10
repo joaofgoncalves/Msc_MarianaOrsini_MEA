@@ -83,7 +83,7 @@ for(inputPath in inputPaths){
 }
 
 
-write_csv(preVarsUsed,"./OUT/MODS/R02/preVarsUsed-R02-v1.csv")
+write_csv(preVarsUsed,"./OUT/MODS/R02/preVarsUsed-R02-v2.csv")
 
 
 
